@@ -1,125 +1,135 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8">
   <title>Video Game Tracker</title>
   <style>
     body {
       font-family: Arial, sans-serif;
-      margin: 40px;
-      background-color: #f5f5f5;
+      padding: 2rem;
+      background: #f4f4f4;
     }
     h1 {
       text-align: center;
     }
     form {
-      max-width: 400px;
+      max-width: 700px;
       margin: 0 auto;
-      padding: 20px;
-      background: white;
-      border-radius: 8px;
-      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+      background: #fff;
+      padding: 1.5rem;
+      border-radius: 10px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
     }
-    label, input, textarea, select {
+    label {
       display: block;
-      width: 100%;
-      margin-bottom: 10px;
+      margin-top: 1rem;
     }
-    input, textarea, select {
-      padding: 8px;
-      border-radius: 4px;
+    input, select, datalist, textarea {
+      width: 100%;
+      padding: 0.5rem;
+      margin-top: 0.25rem;
       border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+    .radio-group {
+      display: flex;
+      gap: 1rem;
+      margin-top: 0.5rem;
     }
     button {
-      padding: 10px;
-      background-color: #4CAF50;
+      margin-top: 1.5rem;
+      padding: 0.75rem 1.5rem;
+      background: #007bff;
       color: white;
       border: none;
-      border-radius: 4px;
+      border-radius: 5px;
       cursor: pointer;
-      margin-top: 10px;
     }
-    #gameList {
-      max-width: 600px;
-      margin: 20px auto;
-      padding: 20px;
-      background: white;
-      border-radius: 8px;
-      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    button:hover {
+      background: #0056b3;
     }
-    .game-entry {
-      margin-bottom: 10px;
-      border-bottom: 1px solid #ddd;
-      padding-bottom: 10px;
+    .action-buttons {
+      text-align: center;
+      margin-top: 2rem;
     }
   </style>
 </head>
 <body>
   <h1>Video Game Tracker</h1>
-  <form id="gameForm">
-    <label for="title">Game Title</label>
-    <input type="text" id="title" name="title" required />
+  <form id="game-form">
+    <label for="title">Game Title:</label>
+    <input type="text" id="title" name="title" required>
 
-    <label for="platform">Platform</label>
-    <input type="text" id="platform" name="platform" required />
+    <label for="platform">Platform:</label>
+    <select id="platform" name="platform" required>
+      <option value="">--Select--</option>
+      <option>PC</option>
+      <option>PlayStation</option>
+      <option>Xbox</option>
+      <option>Switch</option>
+      <option>Mobile</option>
+      <option>Other</option>
+    </select>
 
-    <label for="notes">Notes</label>
-    <textarea id="notes" name="notes"></textarea>
+    <label for="genre">Genre:</label>
+    <input list="genre-list" id="genre" name="genre">
+    <datalist id="genre-list"></datalist>
 
-    <label for="rating">Rating (1-10)</label>
-    <input type="number" id="rating" name="rating" min="1" max="10" required />
+    <label>Game Type:</label>
+    <div class="radio-group">
+      <label><input type="radio" name="type" value="Single Player" required> Single Player</label>
+      <label><input type="radio" name="type" value="Multiplayer"> Multiplayer</label>
+    </div>
 
-    <label for="hours">Hours Played</label>
-    <input type="number" id="hours" name="hours" min="0" step="0.1" required />
+    <label for="date-played">Date Played:</label>
+    <input type="date" id="date-played" name="date-played" required>
+
+    <label for="date-finished">Date Finished:</label>
+    <input type="date" id="date-finished" name="date-finished">
+
+    <label for="rating">Rating (1–10):</label>
+    <input type="number" id="rating" name="rating" min="1" max="10">
+
+    <label for="comments">Comments:</label>
+    <textarea id="comments" name="comments" rows="4"></textarea>
 
     <button type="submit">Add Game</button>
   </form>
 
-  <div id="gameList">
-    <h2>Games Played</h2>
-    <button onclick="exportCSV()">Export as CSV</button>
-    <div id="entries"></div>
+  <div class="action-buttons">
+    <button onclick="exportToCSV()">Export to CSV</button>
+    <input type="file" id="csvFile" accept=".csv" onchange="importFromCSV(event)">
   </div>
 
   <script>
-    const form = document.getElementById('gameForm');
-    const entriesDiv = document.getElementById('entries');
-    const games = [];
+    const form = document.getElementById('game-form');
+    const genreList = document.getElementById('genre-list');
+    const storedData = JSON.parse(localStorage.getItem('gameData') || '[]');
+    const genreSet = new Set(storedData.map(g => g.genre).filter(Boolean));
+
+    function updateGenreList() {
+      genreList.innerHTML = '';
+      [...genreSet].forEach(genre => {
+        const option = document.createElement('option');
+        option.value = genre;
+        genreList.appendChild(option);
+      });
+    }
+
+    updateGenreList();
 
     form.addEventListener('submit', function(e) {
       e.preventDefault();
-      const title = form.title.value;
-      const platform = form.platform.value;
-      const notes = form.notes.value;
-      const rating = form.rating.value;
-      const hours = form.hours.value;
+      const data = {
+        title: form.title.value,
+        platform: form.platform.value,
+        genre: form.genre.value,
+        type: form.type.value,
+        datePlayed: form['date-played'].value,
+        dateFinished: form['date-finished'].value,
+        rating: form.rating.value,
+        comments: form.comments.value
+      };
 
-      const gameData = { title, platform, notes, rating, hours };
-      games.push(gameData);
-
-      const entry = document.createElement('div');
-      entry.className = 'game-entry';
-      entry.innerHTML = `<strong>${title}</strong> on <em>${platform}</em><br>Rating: ${rating}/10<br>Hours Played: ${hours}<br>${notes}`;
-
-      entriesDiv.prepend(entry);
-      form.reset();
-    });
-
-    function exportCSV() {
-      let csvContent = "data:text/csv;charset=utf-8,Title,Platform,Notes,Rating,Hours Played\n";
-      games.forEach(game => {
-        let row = `${game.title},${game.platform},"${game.notes.replace(/"/g, '""')}",${game.rating},${game.hours}`;
-        csvContent += row + "\n";
-      });
-      const encodedUri = encodeURI(csvContent);
-      const link = document.createElement("a");
-      link.setAttribute("href", encodedUri);
-      link.setAttribute("download", "game_tracker.csv");
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    }
-  </script>
-</body>
-</html>
+      storedData.push(data);
+      localStorage.setItem('gameData',
